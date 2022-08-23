@@ -61,14 +61,14 @@ async def edit_message(ctx, message):
 
     orgnl_msg = message
     await ctx.respond("Sent you a dm", ephemeral=True)
-    await ctx.user.send(f' ```{message.content}``` ', embed=None)
+    await ctx.user.send(f' ```{message.content}``` ', embed=None, files = [await discord.Attachment.to_file(x) for x in message.attachments])
 
     try:
         answ = await bot.wait_for("message", timeout=120.0)
     except asyncio.TimeoutError:
         await ctx.user.send("Took too long")
     else:
-        await orgnl_msg.edit(emojify(answ.content), embed=None)
+        await orgnl_msg.edit(emojify(answ.content), embed=None, files = [await discord.Attachment.to_file(x) for x in answ.attachments])
         await ctx.user.send(f"Successfully changed message {orgnl_msg.jump_url}")
 
 
@@ -89,7 +89,7 @@ async def insert_message(ctx, message):
     for i in range(len(chnl_bot_msgs[:chnl_bot_msgs.index(message.id)])):
         msg_nxt = await chn.fetch_message(chnl_bot_msgs[i+1])
         msg_crt = await chn.fetch_message(chnl_bot_msgs[i])
-        await msg_crt.edit(msg_nxt.content, embed=None)
+        await msg_crt.edit(msg_nxt.content, embed=None, files = [await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
 
     await message.edit(content="[PH]")
 bot.run(TOKEN)
