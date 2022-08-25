@@ -6,6 +6,7 @@ from asyncio import TimeoutError
 from http.client import ResponseNotReady
 
 import discord
+from discord.ext.commands import has_permissions, is_owner
 from dotenv import find_dotenv, load_dotenv
 
 load_dotenv(find_dotenv())
@@ -40,15 +41,15 @@ async def on_application_command_error(ctx, error):
     await ctx.respond(error, ephemeral=True)
 
 
-@bot.command(description="Привет комрад")
-async def hi(ctx):
+@bot.command(description="hi")
+async def hi(ctx: discord.ApplicationContext):
     await ctx.respond("​", delete_after=0.1)
     await ctx.send(f"Hi <:eshy:1010604641802801172>")
 
 
 @bot.command(description="Republish")
-# @discord.ext.commands.has_permissions(manage_messages=True)
-async def republish(ctx):
+@has_permissions(manage_messages=True)
+async def republish(ctx: discord.ApplicationContext):
     await ctx.respond("Starting the process", ephemeral=True)
     async for message in ctx.channel.history(oldest_first=True):
         if message.content:
@@ -57,22 +58,22 @@ async def republish(ctx):
 
 
 @bot.command(description="Clears the channnel")
-# @discord.ext.commands.has_permissions(manage_messages=True)
-async def clear(ctx):
+@has_permissions(manage_messages=True)
+async def clear(ctx: discord.ApplicationContext):
     clea = await ctx.channel.purge()
     await ctx.respond(f"Done clearing {len(clea)} messages", delete_after=3)
 
+
 @bot.message_command(description="Test")
-async def test(ctx, message):
-    orgnl_msg = message
+@is_owner()
+async def test(ctx: discord.ApplicationContext, message: discord.Message):
     await ctx.respond("Sent you a dm", ephemeral=True)
-    # await ctx.user.send(message, suppress=True)
-    await ctx.user.send(message.content)
+    await ctx.user.send(message)
 
 
 @bot.message_command(name="Edit message")
-# @discord.ext.commands.has_permissions(manage_messages=True)
-async def edit_message(ctx, message):
+@has_permissions(manage_messages=True)
+async def edit_message(ctx: discord.ApplicationContext, message: discord.Message):
 
     if not (message.author.id == bot.user.id):
         await ctx.respond("Cannot edit non-bot message", ephemeral=True)
@@ -80,20 +81,22 @@ async def edit_message(ctx, message):
 
     orgnl_msg = message
     await ctx.respond("Sent you a dm", ephemeral=True)
-    await ctx.user.send(f' ```{message.content}``` ', suppress = True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+    await ctx.user.send(f' ```{message.content}``` ', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
 
     try:
+        def check(m):
+            return m.user == ctx.user and m.channel == m.user.dm_channel and m.content
         answ = await bot.wait_for("message", timeout=120.0)
     except asyncio.TimeoutError:
         await ctx.user.send("Took too long")
     else:
-        await orgnl_msg.edit(emojify(answ.content), suppress = True, files=[await discord.Attachment.to_file(x) for x in answ.attachments])
+        await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
         await ctx.user.send(f"Successfully changed message {orgnl_msg.jump_url}")
 
 
 @bot.message_command(name="Insert empty message")
-# @discord.ext.commands.has_permissions(manage_messages=True)
-async def insert_message(ctx, message):
+@has_permissions(manage_messages=True)
+async def insert_message(ctx: discord.ApplicationContext, message: discord.Message):
     chnl_bot_msgs = list()
     chn = ctx.channel
 
@@ -108,7 +111,7 @@ async def insert_message(ctx, message):
     for i in range(len(chnl_bot_msgs[:chnl_bot_msgs.index(message.id)])):
         msg_nxt = await chn.fetch_message(chnl_bot_msgs[i+1])
         msg_crt = await chn.fetch_message(chnl_bot_msgs[i])
-        await msg_crt.edit(msg_nxt.content, supress = True, files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
+        await msg_crt.edit(msg_nxt.content, supress=True, files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
 
-    await message.edit(content="[PH]")
+    await message.edit(content="*** ***")
 bot.run(TOKEN)
