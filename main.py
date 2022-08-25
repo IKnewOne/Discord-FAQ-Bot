@@ -1,16 +1,11 @@
 import asyncio
-from email.policy import default
-import itertools
-import json
 import os
-from asyncio import TimeoutError
-from http.client import ResponseNotReady
 
-import re
 import discord
 from discord.ext import commands
 from dotenv import find_dotenv, load_dotenv
 from admin import Administration
+from emoji_management import emojify, deemojify
 
 load_dotenv(find_dotenv())
 TOKEN = os.environ.get("TOKEN")
@@ -26,22 +21,14 @@ ICONS_ALL = [ICONS_DRUID]
 emoji_dict = {}
 
 
-def emojify(s: str) -> str:
-    for emoji, emoji_link in emoji_dict.items():
-        s = s.replace(emoji, emoji_link)
-    return s
-
-def deemojity(s: str) -> str:
-    return re.sub("\<(:[\d\w_]*:)\d*\>", r"\1", s)
-
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})\n------")
     print("Initializing emojis...")
-    
+
     for i in ICONS_ALL:
         for j in list(await bot.get_guild(i).fetch_emojis()):
-            emoji_dict[f':{j.name}:'] = str(j)       
+            emoji_dict[f':{j.name}:'] = str(j)
 
     print("Done")
 
@@ -66,7 +53,7 @@ async def republish(ctx: discord.ApplicationContext):
             if message.author == bot.user:
                 await ctx.channel.send(message.content, suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
             else:
-                await ctx.channel.send(emojify(message.content), suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+                await ctx.channel.send(emojify(message.content, emoji_dict), suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
         else:
             await ctx.channel.send("*** ***")
         await message.delete()
@@ -89,7 +76,7 @@ async def edit_message(ctx: discord.ApplicationContext, message: discord.Message
 
     orgnl_msg = message
     await ctx.respond("Sent you a dm", ephemeral=True)
-    await ctx.user.send(f' ```{deemojity(message.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+    await ctx.user.send(f' ```{deemojify(message.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
 
     try:
         def check(m):
@@ -101,7 +88,7 @@ async def edit_message(ctx: discord.ApplicationContext, message: discord.Message
         if answ.content.lower() == "cancel":
             await ctx.user.send("Cancelled")
             return
-        await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
+        await orgnl_msg.edit(emojify(answ.content, emoji_dict), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
         await ctx.user.send(f"Successfully changed message {orgnl_msg.jump_url}")
 
 
