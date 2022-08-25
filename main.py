@@ -81,15 +81,18 @@ async def edit_message(ctx: discord.ApplicationContext, message: discord.Message
 
     orgnl_msg = message
     await ctx.respond("Sent you a dm", ephemeral=True)
-    await ctx.user.send(f' ```{message.content}``` ', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+    await ctx.user.send(f' ```{message.content}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
 
     try:
         def check(m):
-            return m.user == ctx.user and m.channel == m.user.dm_channel and m.content
-        answ = await bot.wait_for("message", timeout=120.0)
+            return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
+        answ = await bot.wait_for("message", check = check, timeout=120.0)
     except asyncio.TimeoutError:
         await ctx.user.send("Took too long")
     else:
+        if answ.content == "Cancel": 
+            await ctx.user.send("Cancelled")
+            return
         await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
         await ctx.user.send(f"Successfully changed message {orgnl_msg.jump_url}")
 
