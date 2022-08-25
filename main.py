@@ -1,13 +1,16 @@
 import asyncio
+from email.policy import default
 import itertools
 import json
 import os
 from asyncio import TimeoutError
 from http.client import ResponseNotReady
 
+import re
 import discord
-from discord.ext.commands import has_permissions, is_owner
+from discord.ext import commands
 from dotenv import find_dotenv, load_dotenv
+from admin import Administration
 
 load_dotenv(find_dotenv())
 TOKEN = os.environ.get("TOKEN")
@@ -18,6 +21,8 @@ intents.message_content = True
 bot = discord.Bot(intents=intents)
 
 # Create dictionary with bot emojis
+ICONS_DRUID = 1010581918070358156
+ICONS_ALL = [ICONS_DRUID]
 emoji_dict = {}
 
 
@@ -26,13 +31,18 @@ def emojify(s: str) -> str:
         s = s.replace(emoji, emoji_link)
     return s
 
+def deemojity(s: str) -> str:
+    return re.sub("\<(:[\d\w_]*:)\d*\>", r"\1", s)
 
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})\n------")
     print("Initializing emojis...")
-    for i in list(await discord.Client.get_guild(bot, 942472342444048425).fetch_emojis()):
-        emoji_dict[f':{i.name}:'] = str(i)
+    
+    for i in ICONS_ALL:
+        for j in list(await bot.get_guild(i).fetch_emojis()):
+            emoji_dict[f':{j.name}:'] = str(j)       
+
     print("Done")
 
 
@@ -44,35 +54,33 @@ async def on_application_command_error(ctx, error):
 @bot.command(description="hi")
 async def hi(ctx: discord.ApplicationContext):
     await ctx.respond("​", delete_after=0.1)
-    await ctx.send(f"Hi <:eshy:1010604641802801172>")
+    await ctx.send(f"OwO привет <:eshy:1012397593118113792>")
 
 
 @bot.command(description="Republish")
-@has_permissions(manage_messages=True)
+@commands.has_permissions(manage_messages=True)
 async def republish(ctx: discord.ApplicationContext):
     await ctx.respond("Starting the process", ephemeral=True)
     async for message in ctx.channel.history(oldest_first=True):
         if message.content:
-            await ctx.channel.send(message.content, suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+            if message.author == bot.user:
+                await ctx.channel.send(message.content, suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+            else:
+                await ctx.channel.send(emojify(message.content), suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+        else:
+            await ctx.channel.send("*** ***")
         await message.delete()
 
 
 @bot.command(description="Clears the channnel")
-@has_permissions(manage_messages=True)
-async def clear(ctx: discord.ApplicationContext):
-    clea = await ctx.channel.purge()
-    await ctx.respond(f"Done clearing {len(clea)} messages", delete_after=3)
-
-
-@bot.message_command(description="Test")
-@is_owner()
-async def test(ctx: discord.ApplicationContext, message: discord.Message):
-    await ctx.respond("Sent you a dm", ephemeral=True)
-    await ctx.user.send(message)
+@commands.has_permissions(manage_messages=True)
+async def clear(ctx: discord.ApplicationContext, amount: discord.Option(str, default=20),):
+    cleared = await ctx.channel.purge(limit=amount)
+    await ctx.respond(f"Done clearing {len(cleared)} messages", delete_after=10)
 
 
 @bot.message_command(name="Edit message")
-@has_permissions(manage_messages=True)
+@commands.has_permissions(manage_messages=True)
 async def edit_message(ctx: discord.ApplicationContext, message: discord.Message):
 
     if not (message.author.id == bot.user.id):
@@ -81,16 +89,16 @@ async def edit_message(ctx: discord.ApplicationContext, message: discord.Message
 
     orgnl_msg = message
     await ctx.respond("Sent you a dm", ephemeral=True)
-    await ctx.user.send(f' ```{message.content}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+    await ctx.user.send(f' ```{deemojity(message.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
 
     try:
         def check(m):
             return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
-        answ = await bot.wait_for("message", check = check, timeout=120.0)
+        answ = await bot.wait_for("message", check=check, timeout=120.0)
     except asyncio.TimeoutError:
         await ctx.user.send("Took too long")
     else:
-        if answ.content == "Cancel": 
+        if answ.content.lower() == "cancel":
             await ctx.user.send("Cancelled")
             return
         await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
@@ -98,7 +106,7 @@ async def edit_message(ctx: discord.ApplicationContext, message: discord.Message
 
 
 @bot.message_command(name="Insert empty message")
-@has_permissions(manage_messages=True)
+@commands.has_permissions(manage_messages=True)
 async def insert_message(ctx: discord.ApplicationContext, message: discord.Message):
     chnl_bot_msgs = list()
     chn = ctx.channel
@@ -114,7 +122,11 @@ async def insert_message(ctx: discord.ApplicationContext, message: discord.Messa
     for i in range(len(chnl_bot_msgs[:chnl_bot_msgs.index(message.id)])):
         msg_nxt = await chn.fetch_message(chnl_bot_msgs[i+1])
         msg_crt = await chn.fetch_message(chnl_bot_msgs[i])
-        await msg_crt.edit(msg_nxt.content, supress=True, files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
+        await msg_crt.edit(msg_nxt.content, suppress=True, files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
 
     await message.edit(content="*** ***")
+
+
+# bot.load_extension('testing')
+bot.add_cog(Administration(bot))
 bot.run(TOKEN)
