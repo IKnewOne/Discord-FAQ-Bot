@@ -16,8 +16,9 @@ intents.message_content = True
 bot = discord.Bot(intents=intents)
 
 # Create dictionary with bot emojis
-ICONS_DRUID = 1010581918070358156
-ICONS_ALL = [ICONS_DRUID]
+ICONS_RDRUID = 1010581918070358156
+ICONS_FERAL = 846367980207472671
+ICONS_ALL = [ICONS_RDRUID,ICONS_FERAL]
 emoji_dict = {}
 
 
@@ -62,7 +63,7 @@ async def republish(ctx: discord.ApplicationContext):
 @bot.command(description="Clears the channnel")
 @commands.has_permissions(manage_messages=True)
 async def clear(ctx: discord.ApplicationContext, amount: discord.Option(str, default=20),):
-    cleared = await ctx.channel.purge(limit=amount)
+    cleared = await ctx.channel.purge(limit=int(amount))
     await ctx.respond(f"Done clearing {len(cleared)} messages", delete_after=10)
 
 

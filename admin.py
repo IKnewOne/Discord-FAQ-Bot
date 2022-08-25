@@ -5,13 +5,29 @@ from discord.ext import commands
 import discord
 from emoji_management import deemojify
 
-ICONS_DRUID = 1010581918070358156
+ICONS_RDRUID = 1010581918070358156
+ICONS_FERAL = 846367980207472671
+ICONS_ALL = [ICONS_RDRUID,ICONS_FERAL]
 
 
 class Administration(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
 
+    @commands.is_owner()
+    @commands.slash_command(description="List all emotes")
+    async def list_emotes(self, ctx: discord.ApplicationContext):
+        await ctx.respond('Listing', delete_after = 3)
+        for i in ICONS_ALL:
+            message =  ""
+            gname = (self.bot.get_guild(i)).name
+            await ctx.send(f"```Channel {gname}```")
+            for j in list(await self.bot.get_guild(i).fetch_emojis()):
+                # message += f"{j.name} -> {j}\n"
+                await ctx.send(f"{j.name} -> {j}\n")
+        await ctx.respond("Done")
+        
+    
     @commands.is_owner()
     @commands.message_command(description="Test")
     async def TEST(self, ctx: discord.ApplicationContext, message: discord.Message):
@@ -47,7 +63,7 @@ class Administration(commands.Cog):
     async def migrate_emojis(self,
                              ctx: discord.ApplicationContext,
                              from_id: discord.Option(str),
-                             to_id: discord.Option(str, default=ICONS_DRUID)):
+                             to_id: discord.Option(str, default=ICONS_RDRUID)):
         reciever_guild = await self.bot.fetch_guild(int(to_id))
         # reciever_emojis = await discord.Guild.fetch_emojis(reciever_guild)
         sender_emojis = await discord.Guild.fetch_emojis(await self.bot.fetch_guild(int(from_id)))
