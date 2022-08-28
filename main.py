@@ -18,7 +18,7 @@ bot = discord.Bot(intents=intents)
 # Create dictionary with bot emojis
 ICONS_RDRUID = 1010581918070358156
 ICONS_FERAL = 846367980207472671
-ICONS_ALL = [ICONS_RDRUID,ICONS_FERAL]
+ICONS_ALL = [ICONS_RDRUID, ICONS_FERAL]
 emoji_dict = {}
 
 
