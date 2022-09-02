@@ -1,13 +1,14 @@
-from base64 import encode
-from http.client import HTTPException
 import json
-from discord.ext import commands
-import discord
-from emoji_management import deemojify
+import re
+from base64 import encode
+from email.policy import default
+from http.client import HTTPException
 
-ICONS_RDRUID = 1010581918070358156
-ICONS_FERAL = 846367980207472671
-ICONS_ALL = [ICONS_RDRUID,ICONS_FERAL]
+import discord
+from discord import Option
+from discord.ext import commands
+
+from emoji_management import ICONS_ALL, deemojify
 
 
 class Administration(commands.Cog):
@@ -35,15 +36,39 @@ class Administration(commands.Cog):
         await ctx.user.send(f"```{message.content}```")
 
     @commands.is_owner()
-    @commands.slash_command(description="Save channel messages")
-    async def save_messages(self, ctx: discord.ApplicationContext):
+    @commands.slash_command(description="Summary")
+    async def summary(self, ctx: discord.ApplicationContext):
+        await ctx.respond("Sent you a dm", ephemeral=True)
+        description = ""
+        async for msg in ctx.channel.history(oldest_first=True):
+            rslt = re.match("(\*{2}.*\*{2})", msg.content)
+            if rslt is not None:
+                description += f"[{rslt.group(1)}]({msg.jump_url})\n"
+                 
+        embed = discord.Embed(
+            title="Содержание",
+            description=description,
+            color=discord.Colour.blurple(),
+        )
+        await ctx.channel.send("\n", embed=embed)
+
+    @commands.is_owner()
+    @commands.slash_command(description="Save channel messages", )
+    async def save_messages(self, ctx: discord.ApplicationContext, filename: Option(str, "Custom filename", default=None)):
         await ctx.respond("Saving", ephemeral=True)
-        img_id = 0
-        msgs = []
+        chn_id = ctx.channel_id
+        chn_name = ctx.channel.name
+        msgs = [{
+            "chn_id": chn_id,
+            "chn_name": chn_name
+        }]
         async for msg in ctx.channel.history(oldest_first=True):
             content = deemojify(msg.content)
-            chn_id = ctx.channel_id
+            
             images = []
+            # Save images in /messages/channel_id/image_id
+            # save this as data in the message description
+            img_id = 0
             for attachment in msg.attachments:
                 with open(f'messages/{chn_id}/{img_id}.jpg', 'wb') as f:
                     f.write(await attachment.read())
@@ -51,10 +76,11 @@ class Administration(commands.Cog):
                     img_id = img_id + 1
             msgs.append({
                 "content": content,
-                "channel_id": chn_id,
                 "images": images
             })
-        with open(f"messages/{chn_id}-messages.json", "w", encoding='utf-8') as f:
+        # Custom file name if given
+        fn = filename if filename is not None else f"{chn_name}_{chn_id}"
+        with open(f"messages/{fn}.json", "w", encoding='utf-8') as f:
             json.dump(msgs, f, ensure_ascii=False, indent=4)
         await ctx.respond("Done", ephemeral = True)
 
@@ -63,7 +89,7 @@ class Administration(commands.Cog):
     async def migrate_emojis(self,
                              ctx: discord.ApplicationContext,
                              from_id: discord.Option(str),
-                             to_id: discord.Option(str, default=ICONS_RDRUID)):
+                             to_id: discord.Option(str)):
         reciever_guild = await self.bot.fetch_guild(int(to_id))
         # reciever_emojis = await discord.Guild.fetch_emojis(reciever_guild)
         sender_emojis = await discord.Guild.fetch_emojis(await self.bot.fetch_guild(int(from_id)))

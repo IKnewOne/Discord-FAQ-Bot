@@ -1,5 +1,9 @@
 import re
 
+ICONS_RDRUID = 1010581918070358156
+ICONS_FERAL = 846367980207472671
+ICONS_ALL = [ICONS_RDRUID,ICONS_FERAL]
+
 
 def emojify(s: str, emoji_dict: dict) -> str:
     """Turns all :emoji: style emojis into correct form for bot to send.

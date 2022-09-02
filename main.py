@@ -4,21 +4,18 @@ import os
 import discord
 from discord.ext import commands
 from dotenv import find_dotenv, load_dotenv
+
 from admin import Administration
-from emoji_management import emojify, deemojify
+from emoji_management import ICONS_ALL, deemojify, emojify
 
 load_dotenv(find_dotenv())
 TOKEN = os.environ.get("TOKEN")
 
 intents = discord.Intents.default()
 intents.message_content = True
-
 bot = discord.Bot(intents=intents)
 
 # Create dictionary with bot emojis
-ICONS_RDRUID = 1010581918070358156
-ICONS_FERAL = 846367980207472671
-ICONS_ALL = [ICONS_RDRUID, ICONS_FERAL]
 emoji_dict = {}
 
 
@@ -48,6 +45,7 @@ async def hi(ctx: discord.ApplicationContext):
 @bot.command(description="Republish")
 @commands.has_permissions(manage_messages=True)
 async def republish(ctx: discord.ApplicationContext):
+    """Take every message in the channel, delete it and send their copies from bot account"""
     await ctx.respond("Starting the process", ephemeral=True)
     async for message in ctx.channel.history(oldest_first=True):
         if message.content:
@@ -100,19 +98,25 @@ async def insert_message(ctx: discord.ApplicationContext, message: discord.Messa
     chn = ctx.channel
 
     await ctx.respond(f"Created empty message at {message.jump_url}", ephemeral=True)
-    await ctx.channel.send("Temp msg")
+    await ctx.channel.send("*** ***")
 
-    # Get list of bot messages
+    # Get list of bot messages from the end to the one being replaced
     async for msg in ctx.channel.history():
         if msg.author == bot.user:
+            if message.id == msg.id:
+                chnl_bot_msgs.append(msg.id)
+                break
             chnl_bot_msgs.append(msg.id)
 
-    for i in range(len(chnl_bot_msgs[:chnl_bot_msgs.index(message.id)])):
-        msg_nxt = await chn.fetch_message(chnl_bot_msgs[i+1])
-        msg_crt = await chn.fetch_message(chnl_bot_msgs[i])
-        await msg_crt.edit(msg_nxt.content, suppress=True, files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
+    # Start from the end, take the current message content and earlier message content, move
+    # earlier message into current one use. Walk along all message ids except the one being replaced
+    for i in range(len(chnl_bot_msgs[0:-2])):
+        msg_crt,msg_nxt = asyncio.gather(chn.fetch_message(chnl_bot_msgs[i]), 
+                                          chn.fetch_message(chnl_bot_msgs[i+1]))
+        # remove all current message attachments then add attachments from next message to this one
+        await msg_crt.edit(msg_nxt.content, suppress=True, attachments = [], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
 
-    await message.edit(content="*** ***")
+    await message.edit(content="**New Message Placeholder**")
 
 
 # bot.load_extension('testing')
