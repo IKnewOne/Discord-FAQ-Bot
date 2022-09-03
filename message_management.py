@@ -1,0 +1,134 @@
+import asyncio
+from email import message
+import json
+from os import listdir
+from re import match
+
+import discord
+from discord import Option
+from discord.ext import commands
+
+from emoji_management import deemojify, emojify
+
+
+class MessageManagement(commands.Cog):
+    def __init__(self, bot: discord.Bot) -> None:
+        self.bot = bot
+
+    @commands.slash_command(description="Clears the channnel")
+    @commands.has_permissions(manage_messages=True)
+    async def clear(self, ctx: discord.ApplicationContext, amount: Option(str, default = 20)):
+        cleared = await ctx.channel.purge(limit=int(amount))
+        await ctx.respond(f"Done clearing {len(cleared)} messages", delete_after=10)
+
+    @commands.slash_command(description="Republish")
+    @commands.has_permissions(manage_messages=True)
+    async def republish(self, ctx: discord.ApplicationContext):
+        """Take every message in the channel, delete it and send their copies from bot account"""
+        await ctx.respond("Starting the process", ephemeral=True)
+        async for message in ctx.channel.history(oldest_first=True):
+            if message.content:
+                if message.author == self.bot.user:
+                    await ctx.channel.send(message.content, suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+                else:
+                    await ctx.channel.send(emojify(message.content), suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+            else:
+                await ctx.channel.send("*** ***")
+            await message.delete()
+            
+    @commands.slash_command(description="Publish")
+    @commands.is_owner()
+    async def publish(self, ctx: discord.ApplicationContext, filename: Option(str, required=True)):
+        
+        if filename not in listdir("messages//"):
+            await ctx.respond(f"Bad filename: {filename}", ephemeral = True)
+            return
+        
+        with open(f"messages/{filename}", 'r', encoding='utf-8') as f:
+            messages = json.load(f)
+            
+            #  if chn.id != messages[0]["chn_id"]:
+            #     await ctx.respond(f"Wrong channel", ephemeral = True)
+            #     return
+            
+            for msg in messages[1:]:
+                files = []
+                
+                for image in msg["images"]:
+                    files.append(discord.File(f"messages/{messages[0]['chn_id']}/{image}.png"))
+                
+                await ctx.send(emojify(msg["content"]), files = files, suppress=True)
+        
+        
+    @commands.message_command(name="Insert empty message")
+    @commands.has_permissions(manage_messages=True)
+    async def insert_message(self, ctx: discord.ApplicationContext, message: discord.Message):
+        chnl_bot_msgs = list()
+        chn = ctx.channel
+        
+        await ctx.respond(f"Inserted empty message at {message.jump_url}", ephemeral=True)
+        await ctx.channel.send("*** ***")
+        
+        # Get list of bot messages from the end to the one being replaced
+        async for msg in ctx.channel.history():
+            if msg.author == self.bot.user:
+                if message.id == msg.id:
+                    chnl_bot_msgs.append(msg.id)
+                    break
+                chnl_bot_msgs.append(msg.id)
+                
+        # Start from the end, take the current message content and earlier message content, move
+        # earlier message into current one use. Walk along all message ids except the one being replaced
+        for i in range(len(chnl_bot_msgs[0:-1])):
+            msg_crt,msg_nxt = await asyncio.gather(chn.fetch_message(chnl_bot_msgs[i]), 
+                                            chn.fetch_message(chnl_bot_msgs[i+1]))
+            # remove all current message attachments then add attachments from next message to this one
+            await msg_crt.edit(msg_nxt.content, suppress=True, attachments = [], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
+        await message.edit(content="**[PH]**")
+            
+    
+    
+    @commands.message_command(name="Edit message")
+    @commands.has_permissions(manage_messages=True)
+    async def edit_message(self, ctx: discord.ApplicationContext, message: discord.Message):
+
+        if not (message.author.id == self.bot.user.id):
+            await ctx.respond("Cannot edit non-bot message", ephemeral=True)
+            return
+
+        orgnl_msg = message
+        await ctx.respond("Sent you a dm", ephemeral=True)
+        await ctx.user.send(f' ```{deemojify(message.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+
+        try:
+            def check(m):
+                return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
+            answ = await self.bot.wait_for("message", check=check, timeout=120.0)
+        except asyncio.TimeoutError:
+            await ctx.user.send("Took too long")
+        else:
+            if answ.content.lower() == "cancel":
+                await ctx.user.send("Cancelled")
+                return
+            await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
+            await ctx.user.send(f"Successfully changed message {orgnl_msg.jump_url}")
+        
+    @commands.has_permissions(manage_messages=True)
+    @commands.slash_command(description="Post Summary")
+    async def summary(self, ctx: discord.ApplicationContext):
+        await ctx.respond("Sent you a dm", ephemeral=True)
+        description = ""
+        async for msg in ctx.channel.history(oldest_first=True):
+            rslt = match("(\*{2}.*\*{2})", msg.content)
+            if rslt is not None:
+                description += f"[{rslt.group(1)}]({msg.jump_url})\n"
+                 
+        embed = discord.Embed(
+            title="Содержание",
+            description=description,
+            color=discord.Colour.blurple(),
+        )
+        await ctx.channel.send("\n", embed=embed)
+
+def setup(bot):
+    bot.add_cog(MessageManagement(bot))

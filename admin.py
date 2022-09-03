@@ -1,7 +1,5 @@
 import json
 import re
-from base64 import encode
-from email.policy import default
 from http.client import HTTPException
 
 import discord
@@ -30,29 +28,6 @@ class Administration(commands.Cog):
         
     
     @commands.is_owner()
-    @commands.message_command(description="Test")
-    async def TEST(self, ctx: discord.ApplicationContext, message: discord.Message):
-        await ctx.respond("Sent you a dm", ephemeral=True)
-        await ctx.user.send(f"```{message.content}```")
-
-    @commands.is_owner()
-    @commands.slash_command(description="Summary")
-    async def summary(self, ctx: discord.ApplicationContext):
-        await ctx.respond("Sent you a dm", ephemeral=True)
-        description = ""
-        async for msg in ctx.channel.history(oldest_first=True):
-            rslt = re.match("(\*{2}.*\*{2})", msg.content)
-            if rslt is not None:
-                description += f"[{rslt.group(1)}]({msg.jump_url})\n"
-                 
-        embed = discord.Embed(
-            title="Содержание",
-            description=description,
-            color=discord.Colour.blurple(),
-        )
-        await ctx.channel.send("\n", embed=embed)
-
-    @commands.is_owner()
     @commands.slash_command(description="Save channel messages", )
     async def save_messages(self, ctx: discord.ApplicationContext, filename: Option(str, "Custom filename", default=None)):
         await ctx.respond("Saving", ephemeral=True)
@@ -69,10 +44,12 @@ class Administration(commands.Cog):
             # Save images in /messages/channel_id/image_id
             # save this as data in the message description
             img_id = 0
+            if msg.embeds:
+                continue
             for attachment in msg.attachments:
-                with open(f'messages/{chn_id}/{img_id}.jpg', 'wb') as f:
+                with open(f'messages/{chn_id}/{img_id}.png', 'wb') as f:
                     f.write(await attachment.read())
-                    images.append(f"{chn_id}/{img_id}.jpg")
+                    images.append(f"{chn_id}/{img_id}.png")
                     img_id = img_id + 1
             msgs.append({
                 "content": content,
