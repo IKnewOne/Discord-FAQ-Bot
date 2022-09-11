@@ -15,6 +15,16 @@ class MessageManagement(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
 
+    @commands.slash_command(description="Dump messages to user id")
+    @commands.is_owner()
+    async def dump_messages(self, ctx:discord.ApplicationContext, id: Option(str)):
+        user = self.bot.get_user(int(id))
+        if user == None:
+            return
+        await ctx.respond(f"Sending the messages to {user.name}")
+        async for message in ctx.channel.history(oldest_first=True):
+            await user.send(f"```{deemojify(message.content)}```")
+    
     @commands.slash_command(description="Clears the channnel")
     @commands.has_permissions(manage_messages=True)
     async def clear(self, ctx: discord.ApplicationContext, amount: Option(str, default = 20)):
