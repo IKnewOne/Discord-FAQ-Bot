@@ -5,10 +5,11 @@ from discord.ext import commands
 
 ICONS_RDRUID = 1010581918070358156
 ICONS_FERAL = 846367980207472671
-ICONS_ALL = [ICONS_RDRUID,ICONS_FERAL]
+ICONS_ALL = [ICONS_RDRUID, ICONS_FERAL]
 
 # Create dictionary with bot emojis
 emoji_dict = {}
+
 
 def emojify(s: str) -> str:
     """Turns all :emoji: style emojis into correct form for bot to send.
@@ -36,10 +37,11 @@ def deemojify(s: str) -> str:
     """
     return re.sub("\<(:[\d\w_]*:)\d*\>", r"\1", s)
 
+
 class EmojiManagement(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
-        
+
     @commands.Cog.listener()
     async def on_ready(self):
         print("Initializing emojis...")
@@ -49,6 +51,7 @@ class EmojiManagement(commands.Cog):
                 emoji_dict[f':{j.name}:'] = str(j)
 
         print("Done")
+
 
 def setup(bot):
     bot.add_cog(EmojiManagement(bot))

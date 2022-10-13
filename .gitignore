@@ -1,7 +1,8 @@
 .env
 .venv
+.vscode
 info.json
 README.md
-testing.py
 __pycache__
 messages
+bot.bat

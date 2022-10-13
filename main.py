@@ -1,4 +1,3 @@
-import asyncio
 import os
 
 import discord
@@ -32,9 +31,10 @@ async def hi(ctx: discord.ApplicationContext):
     await ctx.respond("​", delete_after=0.1)
     await ctx.send(f"OwO привет <:eshy:1012397593118113792>")
 
+
 @commands.is_owner()
-@commands.message_command(description="Test")
-async def TEST(self, ctx: discord.ApplicationContext, message: discord.Message):
+@bot.message_command(name="test")
+async def TEST(ctx: discord.ApplicationContext, message: discord.Message):
     await ctx.respond("Sent you a dm", ephemeral=True)
     await ctx.user.send(f"```{message.content}```")
 
