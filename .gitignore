@@ -1,7 +1,6 @@
 .env
 .venv
 .vscode
-info.json
 README.md
 __pycache__
 messages
