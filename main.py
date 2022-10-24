@@ -21,6 +21,16 @@ async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})\n------")
 
 
+# @bot.event
+# async def on_message(message: discord.Message):
+#     # Rylai = slowpoke
+#     if message.author.id == 212541475928408064:
+#         await message.add_reaction(":slowpoke:433571859666305024")
+#     # Base case
+#     else:
+#         await bot.process_commands(message)
+
+
 @bot.event
 async def on_application_command_error(ctx, error):
     await ctx.respond(error, ephemeral=True)
