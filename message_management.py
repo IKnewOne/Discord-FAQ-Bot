@@ -31,6 +31,15 @@ class MessageManagement(commands.Cog):
         cleared = await ctx.channel.purge(limit=int(amount))
         await ctx.respond(f"Done clearing {len(cleared)} messages", delete_after=10)
 
+    @commands.slash_command(description="Purge via channel history and manual deletion method")
+    @commands.has_permissions(manage_messages=True)
+    async def hardclear(self, ctx: discord.ApplicationContext):
+
+        for message in ctx.channel.history(oldest_first=True):
+            message.delete
+
+        await ctx.respond("Done", ephemeral=True)
+
     @commands.slash_command(description="Republish")
     @commands.has_permissions(manage_messages=True)
     async def republish(self, ctx: discord.ApplicationContext):
@@ -77,6 +86,8 @@ class MessageManagement(commands.Cog):
         chn = ctx.channel
 
         await ctx.respond(f"Inserted empty message at {message.jump_url}", ephemeral=True)
+
+        # Create an empty message to move last message into
         await ctx.channel.send("*** ***")
 
         # Get list of bot messages from the end to the one being replaced
@@ -88,7 +99,14 @@ class MessageManagement(commands.Cog):
                 chnl_bot_msgs.append(msg.id)
 
         # Start from the end, take the current message content and earlier message content, move
-        # earlier message into current one use. Walk along all message ids except the one being replaced
+        # earlier message into current one. Walk along all message ids except the one being replaced
+        #
+        #               A <- Insert position    >     *** ***
+        #               ↓                       >        |
+        #               B                       >        A
+        #               ↓                       >        |
+        #   Created empty message "*** ***"     >        B
+
         for i in range(len(chnl_bot_msgs[0:-1])):
             msg_crt, msg_nxt = await asyncio.gather(chn.fetch_message(chnl_bot_msgs[i]),
                                                     chn.fetch_message(chnl_bot_msgs[i+1]))
@@ -106,9 +124,10 @@ class MessageManagement(commands.Cog):
 
         orgnl_msg = message
         await ctx.respond("Sent you a dm", ephemeral=True)
-        await ctx.user.send(f' ```{deemojify(message.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+        await ctx.user.send(f' ```{deemojify(orgnl_msg.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in orgnl_msg.attachments])
 
         try:
+            # Pick up only non-empty message from the author of ctx command requrest in the DM channel
             def check(m):
                 return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
             answ = await self.bot.wait_for("message", check=check, timeout=120.0)
@@ -119,26 +138,25 @@ class MessageManagement(commands.Cog):
                 await ctx.user.send("Cancelled")
                 return
             await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
-            await ctx.user.send(f"Successfully changed message {orgnl_msg.jump_url}")
+            await ctx.user.send(f"Successfully changed message at {orgnl_msg.jump_url}")
 
     @commands.has_permissions(manage_messages=True)
-    @commands.slash_command(description="Post Summary")
+    @commands.slash_command(description="Summary")
     async def summary(self, ctx: discord.ApplicationContext):
-        await ctx.respond("Sent you a dm", ephemeral=True)
-        description = ""
+        await ctx.respond("Starting the process...", ephemeral=True)
 
+        description = ""
         async for msg in ctx.channel.history(oldest_first=True):
             rslt = match("(\*{2}.*\*{2})", msg.content)
 
             if rslt is not None:
                 description += f"[{rslt.group(1)}]({msg.jump_url})\n"
 
-        embed = discord.Embed(
+        await ctx.channel.send("\n", embed=discord.Embed(
             title="Содержание",
             description=description,
             color=discord.Colour.blurple(),
-        )
-        await ctx.channel.send("\n", embed=embed)
+        ))
 
 
 def setup(bot):
