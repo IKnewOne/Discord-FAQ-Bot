@@ -1,6 +1,4 @@
 import asyncio
-import json
-from os import listdir
 from re import match
 
 import discord
@@ -27,8 +25,8 @@ class MessageManagement(commands.Cog):
 
     @commands.slash_command(description="Clears the channnel")
     @commands.has_permissions(manage_messages=True)
-    async def clear(self, ctx: discord.ApplicationContext, amount: Option(str, default=20)):
-        cleared = await ctx.channel.purge(limit=int(amount))
+    async def clear(self, ctx: discord.ApplicationContext, amount: Option(int, default=20)):
+        cleared = await ctx.channel.purge(limit=amount)
         await ctx.respond(f"Done clearing {len(cleared)} messages", delete_after=10)
 
     @commands.slash_command(description="Purge via channel history and manual deletion method")
@@ -54,30 +52,6 @@ class MessageManagement(commands.Cog):
             else:
                 await ctx.channel.send("*** ***")
             await message.delete()
-
-    @commands.slash_command(description="Publish")
-    @commands.is_owner()
-    async def publish(self, ctx: discord.ApplicationContext, filename: Option(str, required=True)):
-
-        if filename not in listdir("messages//"):
-            await ctx.respond(f"Bad filename: {filename}", ephemeral=True)
-            return
-
-        with open(f"messages/{filename}", 'r', encoding='utf-8') as f:
-            messages = json.load(f)
-
-            #  if chn.id != messages[0]["chn_id"]:
-            #     await ctx.respond(f"Wrong channel", ephemeral = True)
-            #     return
-
-            for msg in messages[1:]:
-                files = []
-
-                for image in msg["images"]:
-                    files.append(discord.File(
-                        f"messages/{messages[0]['chn_id']}/{image}.png"))
-
-                await ctx.send(emojify(msg["content"]), files=files, suppress=True)
 
     @commands.message_command(name="Insert empty message")
     @commands.has_permissions(manage_messages=True)
