@@ -48,7 +48,6 @@ async def TEST(ctx: discord.ApplicationContext, message: discord.Message):
     await ctx.respond("Sent you a dm", ephemeral=True)
     await ctx.user.send(f"```{message.content}```")
 
-
 bot.add_cog(EmojiManagement(bot))
 bot.add_cog(MessageManagement(bot))
 bot.add_cog(Administration(bot))
