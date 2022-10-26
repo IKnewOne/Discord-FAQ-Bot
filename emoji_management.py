@@ -3,9 +3,7 @@ import re
 import discord
 from discord.ext import commands
 
-ICONS_RDRUID = 1010581918070358156
-ICONS_FERAL = 846367980207472671
-ICONS_ALL = [ICONS_RDRUID, ICONS_FERAL]
+from constans import ICONS_ALL
 
 # Create dictionary with bot emojis
 emoji_dict = {}
@@ -46,7 +44,7 @@ class EmojiManagement(commands.Cog):
     async def on_ready(self):
         print("Initializing emojis...")
 
-        for i in ICONS_ALL:
+        for i in ICONS_ALL.values():
             for j in list(await self.bot.get_guild(i).fetch_emojis()):
                 emoji_dict[f':{j.name}:'] = str(j)
 

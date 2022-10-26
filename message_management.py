@@ -1,10 +1,13 @@
 import asyncio
+import json
+from pathlib import Path
 from re import match
 
 import discord
 from discord import Option
 from discord.ext import commands
 
+from constans import FILEPATH
 from emoji_management import deemojify, emojify
 
 
@@ -104,7 +107,7 @@ class MessageManagement(commands.Cog):
             # Pick up only non-empty message from the author of ctx command requrest in the DM channel
             def check(m):
                 return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
-            answ = await self.bot.wait_for("message", check=check, timeout=120.0)
+            answ = await self.bot.wait_for("message", check=check, timeout=240.0)
         except asyncio.TimeoutError:
             await ctx.user.send("Took too long")
         else:
@@ -131,6 +134,77 @@ class MessageManagement(commands.Cog):
             description=description,
             color=discord.Colour.blurple(),
         ))
+
+    @commands.is_owner()
+    @commands.slash_command(description="Save channel messages", )
+    async def save_messages(self, ctx: discord.ApplicationContext, filename: Option(str, "Filename", default=None)):
+        await ctx.respond("Saving", ephemeral=True)
+        chn_id = ctx.channel_id
+        chn_name = ctx.channel.name
+
+        msgs = [{
+            "chn_name": chn_name,
+            "chn_id": chn_id
+
+        }]
+
+        if filename == None:
+            from datetime import date
+            dt = date.today()
+            filename = f"{ctx.channel.name}-{dt.day}.{dt.month}"
+
+        Path(f"{FILEPATH}/{filename}").mkdir(parents=True, exist_ok=True)
+
+        async for msg in ctx.channel.history(oldest_first=True):
+            content = deemojify(msg.content)
+
+            images = []
+            # Save images in {FILEPATH}/channel_name/image_id
+            # save this as data in the message description
+
+            if msg.embeds:
+                continue
+
+            for attachment in msg.attachments:
+                with open(f'{FILEPATH}/{filename}/{img_id}.png', 'wb') as f:
+                    f.write(await attachment.read())
+                    images.append(f"{filename}/{img_id}.png")
+                    img_id += 1
+            msgs.append({
+                "content": content,
+                "images": images
+            })
+
+        with open(f"{FILEPATH}/{filename}.json", "w", encoding='utf-8') as f:
+            json.dump(msgs, f, ensure_ascii=False, indent=4)
+        await ctx.respond("Done", ephemeral=True)
+
+    @commands.slash_command(description="Publish")
+    @commands.is_owner()
+    async def publish(self, ctx: discord.ApplicationContext, filename: Option(str, "Name of file to publish", required=True)):
+
+        if not Path(f"{FILEPATH}/{filename}.json").is_file():
+            await ctx.respond(f"Bad filename: {filename}", ephemeral=True)
+            return
+
+        await ctx.respond("Starting")
+
+        with open(f"{FILEPATH}/{filename}.json", 'r', encoding='utf-8') as f:
+            messages = json.load(f)
+
+            if ctx.channel_id != messages[0]["chn_id"]:
+                await ctx.respond(f"Wrong channel", ephemeral=True)
+                return
+
+            for msg in messages[1:]:
+                files = []
+
+                for image in msg["images"]:
+                    files.append(discord.File(
+                        f"{FILEPATH}/{filename}/{image}.png")
+                    )
+
+                await ctx.send(emojify(msg["content"]), files=files, suppress=True)
 
 
 def setup(bot):
