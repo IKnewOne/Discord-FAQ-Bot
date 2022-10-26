@@ -7,7 +7,7 @@ import discord
 from discord import Option
 from discord.ext import commands
 
-from constans import FILEPATH
+from constants import FILEPATH
 from emoji_management import deemojify, emojify
 
 

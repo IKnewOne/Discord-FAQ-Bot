@@ -6,7 +6,7 @@ import discord
 from discord import Option
 from discord.ext import commands
 
-from constans import ICONS_ALL
+from constants import ICONS_ALL
 
 
 class Administration(commands.Cog):

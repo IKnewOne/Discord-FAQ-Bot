@@ -3,7 +3,7 @@ import re
 import discord
 from discord.ext import commands
 
-from constans import ICONS_ALL
+from constants import ICONS_ALL
 
 # Create dictionary with bot emojis
 emoji_dict = {}
