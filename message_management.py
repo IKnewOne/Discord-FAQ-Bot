@@ -27,19 +27,10 @@ class MessageManagement(commands.Cog):
             await user.send(f"```{deemojify(message.content)}```")
 
     @commands.slash_command(description="Clears the channnel")
-    @commands.has_permissions(manage_messages=True)
+    @commands.is_owner()
     async def clear(self, ctx: discord.ApplicationContext, amount: Option(int, default=20)):
         cleared = await ctx.channel.purge(limit=amount)
         await ctx.respond(f"Done clearing {len(cleared)} messages", delete_after=10)
-
-    @commands.slash_command(description="Purge via channel history and manual deletion method")
-    @commands.has_permissions(manage_messages=True)
-    async def hardclear(self, ctx: discord.ApplicationContext):
-
-        for message in ctx.channel.history(oldest_first=True):
-            message.delete
-
-        await ctx.respond("Done", ephemeral=True)
 
     @commands.slash_command(description="Republish")
     @commands.has_permissions(manage_messages=True)
@@ -103,19 +94,18 @@ class MessageManagement(commands.Cog):
         await ctx.respond("Sent you a dm", ephemeral=True)
         await ctx.user.send(f' ```{deemojify(orgnl_msg.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in orgnl_msg.attachments])
 
-        try:
-            # Pick up only non-empty message from the author of ctx command requrest in the DM channel
-            def check(m):
-                return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
-            answ = await self.bot.wait_for("message", check=check, timeout=240.0)
-        except asyncio.TimeoutError:
-            await ctx.user.send("Took too long")
-        else:
-            if answ.content.lower() == "cancel":
-                await ctx.user.send("Cancelled")
-                return
-            await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
-            await ctx.user.send(f"Successfully changed message at {orgnl_msg.jump_url}")
+        # Pick up only non-empty message from the author of ctx command requrest in the DM channel
+        def empty_message_check_dm(m):
+            return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
+
+        answ = await self.bot.wait_for("message", check=empty_message_check_dm, timeout=240.0)
+
+        if answ.content.lower() == "cancel":
+            await ctx.user.send("Cancelled")
+            return
+
+        await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
+        await ctx.user.send(f"Successfully changed message at {orgnl_msg.jump_url}")
 
     @commands.has_permissions(manage_messages=True)
     @commands.slash_command(description="Summary")
@@ -151,7 +141,20 @@ class MessageManagement(commands.Cog):
         if filename == None:
             from datetime import date
             dt = date.today()
-            filename = f"{ctx.channel.name}-{dt.day}.{dt.month}"
+
+            match str(ctx.channel_id):
+                case "862009501036838952":
+                    filename = "resto"
+                case "780149018104954921":
+                    filename = "feral"
+                case "780458782181294131":
+                    filename = "guardian"
+                case "779796524275204107":
+                    filename = "boomkin"
+                case _:
+                    filename = ctx.channel.name
+
+            filename += f"-{dt.day}.{dt.month}"
 
         Path(f"{FILEPATH}/{filename}").mkdir(parents=True, exist_ok=True)
 
@@ -166,6 +169,7 @@ class MessageManagement(commands.Cog):
                 continue
 
             for attachment in msg.attachments:
+                img_id = 0
                 with open(f'{FILEPATH}/{filename}/{img_id}.png', 'wb') as f:
                     f.write(await attachment.read())
                     images.append(f"{filename}/{img_id}.png")

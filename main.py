@@ -4,12 +4,13 @@ import discord
 from discord.ext import commands
 from dotenv import find_dotenv, load_dotenv
 
-from admin import Administration
-from emoji_management import EmojiManagement
-from message_management import MessageManagement
-
 load_dotenv(find_dotenv())
 TOKEN = os.environ.get("TOKEN")
+EXTENSIONS = [
+    'emoji_management',
+    'message_management',
+    'admin'
+]
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -48,7 +49,13 @@ async def TEST(ctx: discord.ApplicationContext, message: discord.Message):
     await ctx.respond("Sent you a dm", ephemeral=True)
     await ctx.user.send(f"```{message.content}```")
 
-bot.add_cog(EmojiManagement(bot))
-bot.add_cog(MessageManagement(bot))
-bot.add_cog(Administration(bot))
+
+@commands.is_owner()
+@bot.slash_command(name="reload")
+async def reload(ctx: discord.ApplicationContext):
+    for i in EXTENSIONS:
+        bot.reload_extension(i)
+    await ctx.respond("Done", ephemeral=True)
+
+bot.load_extensions(*EXTENSIONS)
 bot.run(TOKEN)

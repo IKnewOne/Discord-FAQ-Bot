@@ -1,30 +1,15 @@
-import json
 from http.client import HTTPException
-from pathlib import Path
 
 import discord
-from discord import Option
 from discord.ext import commands
 
 from constants import ICONS_ALL
+from emoji_management import init_emojis
 
 
 class Administration(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
-
-    @commands.is_owner()
-    @commands.slash_command(description="List all emotes")
-    async def list_emotes(self, ctx: discord.ApplicationContext):
-        await ctx.respond('Listing', delete_after=3)
-        for i in ICONS_ALL.values():
-
-            guildName = (self.bot.get_guild(i)).name
-            await ctx.send(f"```Channel {guildName}```")
-
-            for j in list(await self.bot.get_guild(i).fetch_emojis()):
-                await ctx.send(f"{j.name} -> {j}\n")
-        await ctx.respond("Done")
 
     @commands.is_owner()
     @commands.slash_command(description="Move emotes from one server to another")
@@ -43,7 +28,7 @@ class Administration(commands.Cog):
         await ctx.respond(f"Done")
 
     @commands.is_owner()
-    @commands.slash_command(descriptino="Send the contens of the channel")
+    @commands.slash_command(description="Send the contens of the channel")
     async def send_channel(self, ctx: discord.ApplicationContext, reciever_id: discord.Option(str)):
         await ctx.respond("Starting the process", ephemeral=True)
 
@@ -52,6 +37,11 @@ class Administration(commands.Cog):
         async for message in ctx.channel.history(oldest_first=True):
             if message.author == self.bot.user:
                 await reciever.send(f"```{message.content}```")
+
+    @commands.is_owner()
+    @commands.slash_command(description="Refresh emojis")
+    async def refresh_emojis(self, ctx: discord.ApplicationContext):
+        await ctx.respond(await init_emojis(self.bot), ephemeral=True)
 
 
 def setup(bot):
