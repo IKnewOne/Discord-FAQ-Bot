@@ -73,8 +73,11 @@ class EmojiManagement(commands.Cog):
                 for e in guildEmotes[i*25:(i+1)*25]:
                     msg += f"{e.name} -> {e}\n"
 
-                await ctx.send(msg)
-
+                if msg:
+                    await ctx.send(msg)
+                else:
+                    await ctx.send("No emotes found")
+                    break
         await ctx.respond("Done", ephemeral=True)
 
 
