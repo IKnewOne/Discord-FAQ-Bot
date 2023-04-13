@@ -79,11 +79,28 @@ class MessageManagement(commands.Cog):
             msg_crt, msg_nxt = await asyncio.gather(chn.fetch_message(chnl_bot_msgs[i]),
                                                     chn.fetch_message(chnl_bot_msgs[i+1]))
             # remove all current message attachments then add attachments from next message to this one
-            await msg_crt.edit(msg_nxt.content, suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments])
-        await message.edit(content="**[PH]**")
+            await msg_crt.edit(msg_nxt.content, attachments=[], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments], embeds=msg_nxt.embeds)
+        await message.edit(content="**[PH]**", suppress=True)
 
-    @commands.message_command(name="Edit message")
+    @commands.message_command(name="Turn into embed")
     @commands.has_permissions(manage_messages=True)
+    async def embedify_message(self, ctx: discord.ApplicationContext, message: discord.Message):
+
+        if not (message.author.id == self.bot.user.id):
+            await ctx.respond("Cannot edit non-bot message", ephemeral=True)
+            return
+
+        title = match("(\*{2}.*\*{2})", message.content).group(1)
+        messageContent = message.content.replace(title, "").strip()
+        embed2 = discord.Embed(title=None, description=messageContent)
+
+        await message.edit(content=title, embed=embed2, suppress=False)
+        # await message.edit(title, suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in message.attachments], embed=embed)
+        # await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
+        await ctx.respond(f"Successfully changed message at {message.jump_url}", ephemeral=True)
+
+    @ commands.message_command(name="Edit message")
+    @ commands.has_permissions(manage_messages=True)
     async def edit_message(self, ctx: discord.ApplicationContext, message: discord.Message):
 
         if not (message.author.id == self.bot.user.id):
@@ -107,8 +124,8 @@ class MessageManagement(commands.Cog):
         await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
         await ctx.user.send(f"Successfully changed message at {orgnl_msg.jump_url}")
 
-    @commands.has_permissions(manage_messages=True)
-    @commands.slash_command(description="Summary")
+    @ commands.has_permissions(manage_messages=True)
+    @ commands.slash_command(description="Summary")
     async def summary(self, ctx: discord.ApplicationContext):
         await ctx.respond("Starting the process...", ephemeral=True)
 
@@ -119,14 +136,14 @@ class MessageManagement(commands.Cog):
             if rslt is not None:
                 description += f"[{rslt.group(1)}]({msg.jump_url})\n"
 
-        await ctx.channel.send("\n", embed=discord.Embed(
+        await ctx.channel.send(content=None, embed=discord.Embed(
             title="Содержание",
             description=description,
             color=discord.Colour.blurple(),
         ))
 
-    @commands.is_owner()
-    @commands.slash_command(description="Save channel messages", )
+    @ commands.is_owner()
+    @ commands.slash_command(description="Save channel messages", )
     async def save_messages(self, ctx: discord.ApplicationContext, filename: Option(str, "Filename", default=None)):
         await ctx.respond("Saving", ephemeral=True)
         chn_id = ctx.channel_id
@@ -165,6 +182,7 @@ class MessageManagement(commands.Cog):
             # Save images in {FILEPATH}/channel_name/image_id
             # save this as data in the message description
 
+            # Skip summary
             if msg.embeds:
                 continue
 
@@ -183,8 +201,8 @@ class MessageManagement(commands.Cog):
             json.dump(msgs, f, ensure_ascii=False, indent=4)
         await ctx.respond("Done", ephemeral=True)
 
-    @commands.slash_command(description="Publish")
-    @commands.is_owner()
+    @ commands.slash_command(description="Publish")
+    @ commands.is_owner()
     async def publish(self, ctx: discord.ApplicationContext, filename: Option(str, "Name of file to publish", required=True)):
 
         if not Path(f"{FILEPATH}/{filename}.json").is_file():
