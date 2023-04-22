@@ -1,5 +1,6 @@
 import asyncio
 import json
+from os import name
 from pathlib import Path
 from re import match
 
@@ -24,7 +25,7 @@ class MessageManagement(commands.Cog):
             return
         await ctx.respond(f"Sending the messages to {user.name}")
         async for message in ctx.channel.history(oldest_first=True):
-            await user.send(f"```{deemojify(message.content)}```")
+            await user.send(f"```{deemojify(message.content)}```", suppress=True)
 
     @commands.slash_command(description="Clears the channnel")
     @commands.is_owner()
@@ -37,14 +38,19 @@ class MessageManagement(commands.Cog):
     async def republish(self, ctx: discord.ApplicationContext):
         """Take every message in the channel, delete it and send their copies from bot account"""
         await ctx.respond("Starting the process", ephemeral=True)
+
+        message: discord.Message
         async for message in ctx.channel.history(oldest_first=True):
             if message.content:
                 if message.author == self.bot.user:
-                    await ctx.channel.send(message.content, suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+                    await ctx.channel.send(message.content, files=[await discord.Attachment.to_file(x) for x in message.attachments], embeds=message.embeds, suppress=False if message.embeds else True)
                 else:
-                    await ctx.channel.send(emojify(message.content), suppress=True, files=[await discord.Attachment.to_file(x) for x in message.attachments])
+                    await ctx.channel.send(emojify(message.content), files=[await discord.Attachment.to_file(x) for x in message.attachments], embeds=message.embeds, suppress=False if message.embeds else True)
             else:
-                await ctx.channel.send("*** ***")
+                if message.embeds and message.embeds[0].title == "Содержание":
+                    await self.bot.get_command("summary").callback(self, ctx)
+                else:
+                    await ctx.channel.send("*** ***")
             await message.delete()
 
     @commands.message_command(name="Insert empty message")
@@ -79,8 +85,8 @@ class MessageManagement(commands.Cog):
             msg_crt, msg_nxt = await asyncio.gather(chn.fetch_message(chnl_bot_msgs[i]),
                                                     chn.fetch_message(chnl_bot_msgs[i+1]))
             # remove all current message attachments then add attachments from next message to this one
-            await msg_crt.edit(msg_nxt.content, attachments=[], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments], embeds=msg_nxt.embeds)
-        await message.edit(content="**[PH]**", suppress=True)
+            await msg_crt.edit(msg_nxt.content, attachments=[], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments], embeds=msg_nxt.embeds, suppress=False if msg_nxt.embeds else True)
+        await message.edit(content="**[PH]**", suppress=True, embeds=[])
 
     @commands.message_command(name="Turn into embed")
     @commands.has_permissions(manage_messages=True)
@@ -107,25 +113,34 @@ class MessageManagement(commands.Cog):
             await ctx.respond("Cannot edit non-bot message", ephemeral=True)
             return
 
-        orgnl_msg = message
+        originalMessage = message
         await ctx.respond("Sent you a dm", ephemeral=True)
-        await ctx.user.send(f' ```{deemojify(orgnl_msg.content)}``` \n Write "Cancel" to stop the process', suppress=True, files=[await discord.Attachment.to_file(x) for x in orgnl_msg.attachments])
+
+        if message.embeds:
+            await ctx.user.send(f' ```{deemojify(originalMessage.content)}\nEMBED\n{originalMessage.embeds[0].description}``` \n Write "Cancel" to stop the process', files=[await discord.Attachment.to_file(x) for x in originalMessage.attachments], suppress=True)
+        else:
+            await ctx.user.send(f' ```{deemojify(originalMessage.content)}``` \n Write "Cancel" to stop the process', files=[await discord.Attachment.to_file(x) for x in originalMessage.attachments], suppress=True)
 
         # Pick up only non-empty message from the author of ctx command requrest in the DM channel
         def empty_message_check_dm(m):
             return m.author == ctx.author and m.channel == m.author.dm_channel and m.content
 
-        answ = await self.bot.wait_for("message", check=empty_message_check_dm, timeout=240.0)
+        answ: discord.Message = await self.bot.wait_for("message", check=empty_message_check_dm, timeout=240.0)
 
         if answ.content.lower() == "cancel":
             await ctx.user.send("Cancelled")
             return
 
-        await orgnl_msg.edit(emojify(answ.content), suppress=True, attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
-        await ctx.user.send(f"Successfully changed message at {orgnl_msg.jump_url}")
+        if 'EMBED' in answ.content:
+            messageContent, embedContent = [x.strip() for x in answ.content.split("EMBED")]
+            embed = discord.Embed(description=embedContent)
+            await originalMessage.edit(emojify(messageContent), embed=embed)
+        else:
+            await originalMessage.edit(emojify(answ.content), attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
+        await ctx.user.send(f"Successfully changed message at {originalMessage.jump_url}")
 
     @ commands.has_permissions(manage_messages=True)
-    @ commands.slash_command(description="Summary")
+    @ commands.slash_command(description="Summary", name="summary")
     async def summary(self, ctx: discord.ApplicationContext):
         await ctx.respond("Starting the process...", ephemeral=True)
 
@@ -182,9 +197,11 @@ class MessageManagement(commands.Cog):
             # Save images in {FILEPATH}/channel_name/image_id
             # save this as data in the message description
 
-            # Skip summary
+            # Embeds
+            embeds = []
             if msg.embeds:
-                continue
+                for embed in msg.embeds:
+                    embeds.append(embed.description)
 
             for attachment in msg.attachments:
                 img_id = 0
@@ -194,7 +211,8 @@ class MessageManagement(commands.Cog):
                     img_id += 1
             msgs.append({
                 "content": content,
-                "images": images
+                "images": images,
+                "embeds": embeds
             })
 
         with open(f"{FILEPATH}/{filename}.json", "w", encoding='utf-8') as f:
@@ -226,7 +244,13 @@ class MessageManagement(commands.Cog):
                         f"{FILEPATH}/{filename}/{image}.png")
                     )
 
-                await ctx.send(emojify(msg["content"]), files=files, suppress=True)
+                embeds = []
+                for embed in msg["embeds"]:
+                    embedObject = discord.Embed(description=embed)
+
+                await ctx.send(emojify(msg["content"]), files=files, embeds=embeds)
+
+# def copyMessageContent(message: discord.Message):
 
 
 def setup(bot):
