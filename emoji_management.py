@@ -9,13 +9,37 @@ from constants import ICONS_ALL
 emoji_dict = {}
 
 
+# async def init_emojis(bot) -> int:
+#     ecount = 0
+#     for i in ICONS_ALL.values():
+#         for j in list(await bot.get_guild(i).fetch_emojis()):
+#             emoji_dict[f':{j.name}:'] = str(j)
+#             ecount += 1
+#     return f"Initialized {ecount} emojis"
+
 async def init_emojis(bot) -> int:
     ecount = 0
     for i in ICONS_ALL.values():
         for j in list(await bot.get_guild(i).fetch_emojis()):
             emoji_dict[f':{j.name}:'] = str(j)
+            emoji_dict[f'<:{j.name}:{j.id}>'] = str(j)
             ecount += 1
     return f"Initialized {ecount} emojis"
+
+
+# def emojify(s: str) -> str:
+#     """Turns all :emoji: style emojis into correct form for bot to send.
+
+#     Args:
+#         s (str): message content to transform
+#         emoji_dict (dict): your saved emoji dictionary
+
+#     Returns:
+#         str: Transformed message
+#     """
+#     for emoji, emoji_link in emoji_dict.items():
+#         s = s.replace(emoji, emoji_link)
+#     return s
 
 
 def emojify(s: str) -> str:
@@ -28,8 +52,11 @@ def emojify(s: str) -> str:
     Returns:
         str: Transformed message
     """
-    for emoji, emoji_link in emoji_dict.items():
-        s = s.replace(emoji, emoji_link)
+    pattern = r'<:.*:\d+>|:\w+:'
+    matches = re.findall(pattern, s)
+    for match in matches:
+        if match in emoji_dict:
+            s = s.replace(match, emoji_dict[match])
     return s
 
 
