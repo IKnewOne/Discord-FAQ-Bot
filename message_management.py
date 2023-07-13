@@ -11,7 +11,7 @@ from discord.ext import commands
 from constants import FILEPATH
 from emoji_management import deemojify, emojify
 
-reTitleGroup = "(^#{2} .*)"
+reTitleGroup = "(^#{1,3} .*)"
 
 
 class MessageManagement(commands.Cog):
