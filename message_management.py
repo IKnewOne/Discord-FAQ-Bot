@@ -11,6 +11,8 @@ from discord.ext import commands
 from constants import FILEPATH
 from emoji_management import deemojify, emojify
 
+reTitleGroup = "(^#{2} .*)"
+
 
 class MessageManagement(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
@@ -96,7 +98,7 @@ class MessageManagement(commands.Cog):
             await ctx.respond("Cannot edit non-bot message", ephemeral=True)
             return
 
-        title = match("(\*{2}.*\*{2})", message.content).group(1)
+        title = match(reTitleGroup, message.content).group(1)
         messageContent = message.content.replace(title, "").strip()
         embed2 = discord.Embed(title=None, description=messageContent)
 
@@ -146,10 +148,11 @@ class MessageManagement(commands.Cog):
 
         description = ""
         async for msg in ctx.channel.history(oldest_first=True):
-            rslt = match("(\*{2}.*\*{2})", msg.content)
+            rslt = match(reTitleGroup, msg.content)
+            # rslt = match("(\*{2}.*\*{2})", msg.content)
 
             if rslt is not None:
-                description += f"[{rslt.group(1)}]({msg.jump_url})\n"
+                description += f"[{rslt.group(1).replace('#', '').strip()}]({msg.jump_url})\n"
 
         await ctx.channel.send(content=None, embed=discord.Embed(
             title="Содержание",
@@ -246,7 +249,7 @@ class MessageManagement(commands.Cog):
 
                 embeds = []
                 for embed in msg["embeds"]:
-                    embedObject = discord.Embed(description=embed)
+                    embeds.append(discord.Embed(description=embed))
 
                 await ctx.send(emojify(msg["content"]), files=files, embeds=embeds)
 
