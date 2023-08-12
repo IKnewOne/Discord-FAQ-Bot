@@ -22,7 +22,6 @@ async def init_emojis(bot) -> int:
     for i in ICONS_ALL.values():
         for j in list(await bot.get_guild(i).fetch_emojis()):
             emoji_dict[f':{j.name}:'] = str(j)
-            emoji_dict[f'<:{j.name}:{j.id}>'] = str(j)
             ecount += 1
     return f"Initialized {ecount} emojis"
 
@@ -41,22 +40,18 @@ async def init_emojis(bot) -> int:
 #         s = s.replace(emoji, emoji_link)
 #     return s
 
+def emojify_helper(match):
+
+    text = match.group(0)
+
+    if re.match(r'<:[\w\d]*:<\d*:>', text):
+        return text
+    else:
+        return emoji_dict.get(text, text)
+
 
 def emojify(s: str) -> str:
-    """Turns all :emoji: style emojis into correct form for bot to send.
-
-    Args:
-        s (str): message content to transform
-        emoji_dict (dict): your saved emoji dictionary
-
-    Returns:
-        str: Transformed message
-    """
-    pattern = r'<:.*:\d+>|:\w+:'
-    matches = re.findall(pattern, s)
-    for match in matches:
-        if match in emoji_dict:
-            s = s.replace(match, emoji_dict[match])
+    s = re.sub(r':[\w\d]*:|<:[\w\d]*:<\d*:>', emojify_helper, s)
     return s
 
 
