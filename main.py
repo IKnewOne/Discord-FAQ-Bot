@@ -9,7 +9,8 @@ TOKEN = os.environ.get("TOKEN")
 EXTENSIONS = [
     'emoji_management',
     'message_management',
-    'admin'
+    'admin',
+    'special'
 ]
 
 intents = discord.Intents.default()
