@@ -9,49 +9,31 @@ from constants import ICONS_ALL
 emoji_dict = {}
 
 
-# async def init_emojis(bot) -> int:
-#     ecount = 0
-#     for i in ICONS_ALL.values():
-#         for j in list(await bot.get_guild(i).fetch_emojis()):
-#             emoji_dict[f':{j.name}:'] = str(j)
-#             ecount += 1
-#     return f"Initialized {ecount} emojis"
-
-async def init_emojis(bot) -> int:
+async def init_emojis(bot) -> str:
     ecount = 0
     for i in ICONS_ALL.values():
-        for j in list(await bot.get_guild(i).fetch_emojis()):
-            emoji_dict[f':{j.name}:'] = str(j)
-            ecount += 1
+        guild = bot.get_guild(i)
+        if guild is not None:
+            for j in await guild.fetch_emojis():
+                emoji_dict[f':{j.name}:'] = str(j)
+                ecount += 1
     return f"Initialized {ecount} emojis"
 
 
-# def emojify(s: str) -> str:
-#     """Turns all :emoji: style emojis into correct form for bot to send.
-
-#     Args:
-#         s (str): message content to transform
-#         emoji_dict (dict): your saved emoji dictionary
-
-#     Returns:
-#         str: Transformed message
-#     """
-#     for emoji, emoji_link in emoji_dict.items():
-#         s = s.replace(emoji, emoji_link)
-#     return s
-
 def emojify_helper(match):
-
     text = match.group(0)
 
-    if re.match(r'<:[\w\d]*:<\d*:>', text):
+    # Check if the text is already in Discord format
+    if re.match(r'<:[\w\d]+:\d+>', text):
         return text
     else:
+        # Replace the emoji name with its corresponding Discord format from emoji_dict
         return emoji_dict.get(text, text)
 
 
 def emojify(s: str) -> str:
-    s = re.sub(r':[\w\d]*:|<:[\w\d]*:<\d*:>', emojify_helper, s)
+    # Use a regex to match both custom emoji names and existing Discord-formatted emojis
+    s = re.sub(r':[\w\d]+:|<:[\w\d]+:\d+>', emojify_helper, s)
     return s
 
 
