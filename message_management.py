@@ -17,53 +17,52 @@ from emoji_management import deemojify, emojify
 reTitleGroup = "(^#{1,3} .*)"
 
 
-def fix_item_links(message: Message) -> None:
-    # Regular expression to find unfixed links that are not already fixed
-    unfixed_link_pattern = r'https://www.wowhead.com(?:/ru)?/item=\d+(?:/[^\s\)]*)?'
-    fixed_link_pattern = r'\[.*?\]\(https://www.wowhead.com(?:/ru)?/item=\d+(?:/[^\s\)]*)?\)'
-
-    def get_item_name(url):
-        try:
-            response = requests.get(url)
-            response.raise_for_status()
-            soup = BeautifulSoup(response.content, 'html.parser')
-            item_name = soup.find(class_='main').find(class_='text').find(class_='heading-size-1').get_text(strip=True)
-            return item_name
-        except Exception as e:
-            print(f"Error fetching item name from {url}: {e}")
-            return None
-
-    def replace_link(match):
-        url = match.group(0)
-        item_id_match = re.search(r'item=(\d+)', url)
-        if item_id_match:
-            item_id = item_id_match.group(1)
-            ru_url = f"https://www.wowhead.com/ru/item={item_id}"
-            item_name = get_item_name(ru_url)
-            if item_name:
-                return f'[{item_name}]({ru_url})'
-        return url  # Return the original URL if something goes wrong
-
-    # Split the content into parts where there are fixed links and unfixed links
-    parts = re.split(f'({fixed_link_pattern})', message.content)
-    new_parts = []
-
-    for part in parts:
-        # If the part is a fixed link, keep it as is
-        if re.match(fixed_link_pattern, part):
-            new_parts.append(part)
-        else:
-            # Replace unfixed links in this part
-            new_parts.append(re.sub(unfixed_link_pattern, replace_link, part))
-
-    # Reassemble the content
-    message.content = ''.join(new_parts)
-
-
 class MessageManagement(commands.Cog):
 
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
+
+    def fix_item_links(self, message: Message) -> None:
+        # Regular expression to find unfixed links that are not already fixed
+        unfixed_link_pattern = r'https://www.wowhead.com(?:/ru)?/item=\d+(?:/[^\s\)]*)?'
+        fixed_link_pattern = r'\[.*?\]\(https://www.wowhead.com(?:/ru)?/item=\d+(?:/[^\s\)]*)?\)'
+
+        def get_item_name(url):
+            try:
+                response = requests.get(url)
+                response.raise_for_status()
+                soup = BeautifulSoup(response.content, 'html.parser')
+                item_name = soup.find(class_='main').find(class_='text').find(class_='heading-size-1').get_text(strip=True)
+                return item_name
+            except Exception as e:
+                print(f"Error fetching item name from {url}: {e}")
+                return None
+
+        def replace_link(match):
+            url = match.group(0)
+            item_id_match = re.search(r'item=(\d+)', url)
+            if item_id_match:
+                item_id = item_id_match.group(1)
+                ru_url = f"https://www.wowhead.com/ru/item={item_id}"
+                item_name = get_item_name(ru_url)
+                if item_name:
+                    return f'[{item_name}]({ru_url})'
+            return url  # Return the original URL if something goes wrong
+
+        # Split the content into parts where there are fixed links and unfixed links
+        parts = re.split(f'({fixed_link_pattern})', message.content)
+        new_parts = []
+
+        for part in parts:
+            # If the part is a fixed link, keep it as is
+            if re.match(fixed_link_pattern, part):
+                new_parts.append(part)
+            else:
+                # Replace unfixed links in this part
+                new_parts.append(re.sub(unfixed_link_pattern, replace_link, part))
+
+        # Reassemble the content
+        message.content = ''.join(new_parts)
 
     @commands.slash_command(description="Dump messages to user id")
     @commands.is_owner()
@@ -180,7 +179,7 @@ class MessageManagement(commands.Cog):
             await ctx.user.send("Cancelled")
             return
 
-        fix_item_links(answ)
+        self.fix_item_links(answ)
 
         if 'EMBED' in answ.content:
             messageContent, embedContent = [
