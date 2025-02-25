@@ -1,6 +1,7 @@
 import asyncio
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from os import name
 from pathlib import Path
 from re import Match, match
@@ -29,6 +30,9 @@ class MessageManagement(commands.Cog):
 
         def get_item_name(url):
             try:
+                # Convert any English URL to its Russian equivalent
+                url = re.sub(r'https://www.wowhead.com/item=', 'https://www.wowhead.com/ru/item=', url)
+
                 response = requests.get(url)
                 response.raise_for_status()
                 soup = BeautifulSoup(response.content, 'html.parser')
@@ -38,28 +42,49 @@ class MessageManagement(commands.Cog):
                 print(f"Error fetching item name from {url}: {e}")
                 return None
 
-        def replace_link(match):
-            url = match.group(0)
+        def replace_link(url, item_name):
             item_id_match = re.search(r'item=(\d+)', url)
-            if item_id_match:
+            if item_id_match and item_name:
                 item_id = item_id_match.group(1)
                 ru_url = f"https://www.wowhead.com/ru/item={item_id}"
-                item_name = get_item_name(ru_url)
-                if item_name:
-                    return f'[{item_name}]({ru_url})'
-            return url  # Return the original URL if something goes wrong
+                return f'[{item_name}]({ru_url})'
+            return url
 
         # Split the content into parts where there are fixed links and unfixed links
         parts = re.split(f'({fixed_link_pattern})', message.content)
         new_parts = []
+        links_to_fix = []
 
+        # Collect all unfixed links in parts that need replacing
         for part in parts:
-            # If the part is a fixed link, keep it as is
             if re.match(fixed_link_pattern, part):
                 new_parts.append(part)
             else:
-                # Replace unfixed links in this part
-                new_parts.append(re.sub(unfixed_link_pattern, replace_link, part))
+                # Find all unfixed links in this part
+                unfixed_links = re.findall(unfixed_link_pattern, part)
+                if unfixed_links:
+                    links_to_fix.extend(unfixed_links)
+                new_parts.append(part)
+
+        # Use ThreadPoolExecutor to process links in parallel
+        link_to_name = {}
+        with ThreadPoolExecutor() as executor:
+            future_to_url = {executor.submit(get_item_name, url): url for url in links_to_fix}
+            for future in as_completed(future_to_url):
+                url = future_to_url[future]
+                try:
+                    item_name = future.result()
+                    link_to_name[url] = item_name
+                except Exception as e:
+                    print(f"Error processing link {url}: {e}")
+
+        # Replace unfixed links in new_parts with the fetched item names
+        for i, part in enumerate(new_parts):
+            if not re.match(fixed_link_pattern, part):
+                for url, item_name in link_to_name.items():
+                    if url in part:
+                        part = part.replace(url, replace_link(url, item_name))
+                new_parts[i] = part
 
         # Reassemble the content
         message.content = ''.join(new_parts)
