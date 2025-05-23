@@ -96,7 +96,7 @@ class MessageManagement(commands.Cog):
         if user == None:
             await ctx.respond(f"Bad user name {user.name}")
             return
-        await ctx.respond(f"Sending the messages to {user.name}")
+        await ctx.respond(f"Sending the messages to {user.name}", ephemeral=True)
         async for message in ctx.channel.history(oldest_first=True):
             await user.send(f"```{deemojify(message.content)}```", suppress=True)
 
@@ -215,8 +215,8 @@ class MessageManagement(commands.Cog):
             await originalMessage.edit(emojify(answ.content), attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
         await ctx.user.send(f"Successfully changed message at {originalMessage.jump_url}")
 
-    @ commands.has_permissions(manage_messages=True)
-    @ commands.slash_command(description="Summary", name="summary")
+    @commands.has_permissions(manage_messages=True)
+    @commands.slash_command(description="Summary", name="summary")
     async def summary(self, ctx: discord.ApplicationContext):
         await ctx.respond("Starting the process...", ephemeral=True)
 
@@ -234,8 +234,8 @@ class MessageManagement(commands.Cog):
             color=discord.Colour.blurple(),
         ))
 
-    @ commands.is_owner()
-    @ commands.slash_command(description="Save channel messages", )
+    @commands.is_owner()
+    @commands.slash_command(description="Save channel messages", )
     async def save_messages(self, ctx: discord.ApplicationContext, filename: Option(str, "Filename", default=None)):
         await ctx.respond("Saving", ephemeral=True)
         chn_id = ctx.channel_id
@@ -296,8 +296,8 @@ class MessageManagement(commands.Cog):
             json.dump(msgs, f, ensure_ascii=False, indent=4)
         await ctx.respond("Done", ephemeral=True)
 
-    @ commands.slash_command(description="Publish")
-    @ commands.is_owner()
+    @commands.slash_command(description="Publish")
+    @commands.is_owner()
     async def publish(self, ctx: discord.ApplicationContext, filename: Option(str, "Name of file to publish", required=True)):
 
         if not Path(f"{FILEPATH}/{filename}.json").is_file():
