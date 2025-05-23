@@ -37,7 +37,6 @@ async def hi(ctx: discord.ApplicationContext):
     await ctx.send(f"OwO привет <:eshy:1012397593118113792>")
 
 
-@commands.is_owner()
 @bot.slash_command(name="reload")
 async def reload(ctx: discord.ApplicationContext):
     for i in EXTENSIONS:

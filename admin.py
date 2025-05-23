@@ -38,7 +38,6 @@ class Administration(commands.Cog):
             if message.author == self.bot.user:
                 await reciever.send(f"```{message.content}```")
 
-    @commands.is_owner()
     @commands.slash_command(description="Refresh emojis")
     async def refresh_emojis(self, ctx: discord.ApplicationContext):
         await ctx.respond(await init_emojis(self.bot), ephemeral=True)
