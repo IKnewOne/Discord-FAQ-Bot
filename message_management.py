@@ -12,10 +12,8 @@ from bs4 import BeautifulSoup
 from discord import Message, Option
 from discord.ext import commands
 
-from constants import FILEPATH
+from constants import FILEPATH, reTitleGroup
 from emoji_management import deemojify, emojify
-
-reTitleGroup = "(^#{1,3} .*)"
 
 
 class MessageManagement(commands.Cog):

@@ -9,3 +9,4 @@ ICONS_ALL = {
     "ICONS_BALANCE": ICONS_BALANCE
 }
 FILEPATH = r"messages"
+reTitleGroup = "(^#{1,3} .*)"
