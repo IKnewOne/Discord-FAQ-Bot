@@ -232,7 +232,6 @@ class MessageManagement(commands.Cog):
             color=discord.Colour.blurple(),
         ))
 
-    @commands.is_owner()
     @commands.slash_command(description="Save channel messages", )
     async def save_messages(self, ctx: discord.ApplicationContext, filename: Option(str, "Filename", default=None)):
         await ctx.respond("Saving", ephemeral=True)
