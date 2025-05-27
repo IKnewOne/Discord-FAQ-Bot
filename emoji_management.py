@@ -9,14 +9,20 @@ from constants import ICONS_ALL
 emoji_dict = {}
 
 
-async def init_emojis(bot) -> str:
+async def init_emojis(bot: discord.Bot) -> str:
     ecount = 0
-    for i in ICONS_ALL.values():
-        guild = bot.get_guild(i)
-        if guild is not None:
-            for j in await guild.fetch_emojis():
-                emoji_dict[f':{j.name}:'] = str(j)
-                ecount += 1
+
+    for guild in bot.guilds:
+        for emoji in await guild.fetch_emojis():
+            emoji_dict[f':{emoji.name}:'] = str(emoji)
+            ecount += 1
+
+    # for i in ICONS_ALL.values():
+    #     guild = bot.get_guild(i)
+    #     if guild is not None:
+    #         for j in await guild.fetch_emojis():
+    #             emoji_dict[f':{j.name}:'] = str(j)
+    #             ecount += 1
     return f"Initialized {ecount} emojis"
 
 
