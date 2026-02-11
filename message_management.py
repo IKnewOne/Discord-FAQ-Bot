@@ -2,9 +2,8 @@ import asyncio
 import json
 import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from os import name
 from pathlib import Path
-from re import Match, match
+from re import match
 
 import discord
 import requests
@@ -21,7 +20,8 @@ class MessageManagement(commands.Cog):
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
 
-    def fix_item_links(self, message: Message) -> None:
+    @staticmethod
+    def fix_item_links(message: Message) -> None:
         # Regular expression to find unfixed links that are not already fixed
         unfixed_link_pattern = r'https://www.wowhead.com(?:/ru)?/item=\d+(?:/[^\s\)]*)?'
         fixed_link_pattern = r'\[.*?\]\(https://www.wowhead.com(?:/ru)?/item=\d+(?:/[^\s\)]*)?\)'
@@ -154,9 +154,9 @@ class MessageManagement(commands.Cog):
 
         for i in range(len(chnl_bot_msgs[0:-1])):
             msg_crt, msg_nxt = await asyncio.gather(chn.fetch_message(chnl_bot_msgs[i]),
-                                                    chn.fetch_message(chnl_bot_msgs[i+1]))
+                                                    chn.fetch_message(chnl_bot_msgs[i + 1]))
             # remove all current message attachments then add attachments from next message to this one
-            await msg_crt.edit(msg_nxt.content, attachments=[], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments], embeds=msg_nxt.embeds, suppress=False if msg_nxt.embeds else True)
+            await msg_crt.edit(content=msg_nxt.content, attachments=[], files=[await discord.Attachment.to_file(x) for x in msg_nxt.attachments], embeds=msg_nxt.embeds, suppress=False if msg_nxt.embeds else True)
         await message.edit(content="**[PH]**", suppress=True, embeds=[])
 
     @commands.message_command(name="Turn into embed")
@@ -188,7 +188,8 @@ class MessageManagement(commands.Cog):
         await ctx.respond("Sent you a dm", ephemeral=True)
 
         if message.embeds:
-            await ctx.user.send(f' ```{deemojify(originalMessage.content)}\nEMBED\n{originalMessage.embeds[0].description}``` \n Write "Cancel" to stop the process', files=[await discord.Attachment.to_file(x) for x in originalMessage.attachments], suppress=True)
+            await ctx.user.send(f' ```{deemojify(originalMessage.content)}\nEMBED\n{originalMessage.embeds[0].description}``` \n Write "Cancel" to stop the process',
+                                files=[await discord.Attachment.to_file(x) for x in originalMessage.attachments], suppress=True)
         else:
             await ctx.user.send(f' ```{deemojify(originalMessage.content)}``` \n Write "Cancel" to stop the process', files=[await discord.Attachment.to_file(x) for x in originalMessage.attachments], suppress=True)
 
@@ -208,9 +209,9 @@ class MessageManagement(commands.Cog):
             messageContent, embedContent = [
                 x.strip() for x in answ.content.split("EMBED")]
             embed = discord.Embed(description=embedContent)
-            await originalMessage.edit(emojify(messageContent), embed=embed)
+            await originalMessage.edit(content=emojify(messageContent), embed=embed)
         else:
-            await originalMessage.edit(emojify(answ.content), attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
+            await originalMessage.edit(content=emojify(answ.content), attachments=[], files=[await discord.Attachment.to_file(x) for x in answ.attachments])
         await ctx.user.send(f"Successfully changed message at {originalMessage.jump_url}")
 
     @commands.has_permissions(manage_messages=True)
@@ -306,16 +307,12 @@ class MessageManagement(commands.Cog):
         with open(f"{FILEPATH}/{filename}.json", 'r', encoding='utf-8') as f:
             messages = json.load(f)
 
-            if ctx.channel_id != messages[0]["chn_id"]:
-                await ctx.respond(f"Wrong channel", ephemeral=True)
-                return
-
             for msg in messages[1:]:
                 files = []
 
                 for image in msg["images"]:
                     files.append(discord.File(
-                        f"{FILEPATH}/{filename}/{image}.png")
+                        f"{FILEPATH}/{image}")
                     )
 
                 embeds = []
@@ -323,6 +320,7 @@ class MessageManagement(commands.Cog):
                     embeds.append(discord.Embed(description=embed))
 
                 await ctx.send(emojify(msg["content"]), files=files, embeds=embeds)
+
 
 # def copyMessageContent(message: discord.Message):
 

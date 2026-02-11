@@ -11,6 +11,7 @@ TOKEN = os.environ.get("TOKEN")
 EXTENSIONS = [
     'emoji_management',
     'message_management',
+    'message_triggers',
     'admin',
     'special'
 ]

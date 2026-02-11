@@ -16,13 +16,6 @@ async def init_emojis(bot: discord.Bot) -> str:
         for emoji in await guild.fetch_emojis():
             emoji_dict[f':{emoji.name}:'] = str(emoji)
             ecount += 1
-
-    # for i in ICONS_ALL.values():
-    #     guild = bot.get_guild(i)
-    #     if guild is not None:
-    #         for j in await guild.fetch_emojis():
-    #             emoji_dict[f':{j.name}:'] = str(j)
-    #             ecount += 1
     return f"Initialized {ecount} emojis"
 
 
@@ -30,7 +23,7 @@ def emojify_helper(match):
     text = match.group(0)
 
     # Check if the text is already in Discord format
-    if re.match(r'<:[\w\d]+:\d+>', text):
+    if re.match(r'<:\w+:\d+>', text):
         return text
     else:
         # Replace the emoji name with its corresponding Discord format from emoji_dict
@@ -39,7 +32,7 @@ def emojify_helper(match):
 
 def emojify(s: str) -> str:
     # Use a regex to match both custom emoji names and existing Discord-formatted emojis
-    s = re.sub(r':[\w\d]+:|<:[\w\d]+:\d+>', emojify_helper, s)
+    s = re.sub(r':\w+:|<:\w+:\d+>', emojify_helper, s)
     return s
 
 
@@ -52,7 +45,7 @@ def deemojify(s: str) -> str:
     Returns:
         str: Transformed message
     """
-    return re.sub("\<(:[\d\w_]*:)\d*\>", r"\1", s)
+    return re.sub("<(:[\\w_]*:)*>", r"\1", s)
 
 
 class EmojiManagement(commands.Cog):
@@ -76,11 +69,11 @@ class EmojiManagement(commands.Cog):
             await ctx.send(f"```Channel {guildName}```")
             guildEmotes = sorted(list(await self.bot.get_guild(i).fetch_emojis()), key=lambda x: x.name.lower())
 
-            for i in range(2):
+            for j in range(2):
                 msg = ""
 
                 # Do 0-25 and 26-50 separately to not exceed the 2000 char limit
-                for e in guildEmotes[i*25:(i+1)*25]:
+                for e in guildEmotes[j*25:(j+1)*25]:
                     msg += f"{e.name} -> {e}\n"
 
                 if msg:
