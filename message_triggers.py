@@ -3,7 +3,7 @@ import sqlite3
 from pathlib import Path
 
 import discord
-from discord import Option
+from discord import Option, SlashCommandGroup
 from discord.ext import commands
 
 DB_PATH = Path(__file__).parent / "database.db"
@@ -64,6 +64,7 @@ def init_db():
 
 
 class MessageTriggers(commands.Cog):
+    triggers = SlashCommandGroup("triggers", "Manage message triggers in this channel")
 
     def __init__(self, bot: discord.Bot) -> None:
         self.bot = bot
@@ -73,7 +74,7 @@ class MessageTriggers(commands.Cog):
         return sqlite3.connect(DB_PATH)
 
     @commands.has_permissions(manage_messages=True)
-    @commands.slash_command(description="Set up a message trigger")
+    @triggers.command(name="set", description="Set a message trigger")
     async def set_trigger(
             self,
             ctx: discord.ApplicationContext,
@@ -138,8 +139,8 @@ class MessageTriggers(commands.Cog):
             response_info += f"\nResponse: `{response_text}`"
         await ctx.respond(response_info, ephemeral=True)
 
-    @commands.slash_command(description="Delete a message trigger")
     @commands.has_permissions(manage_messages=True)
+    @triggers.command(name="delete", description="Delete a message trigger")
     async def delete_trigger(
             self,
             ctx: discord.ApplicationContext,
@@ -173,7 +174,7 @@ class MessageTriggers(commands.Cog):
             await ctx.respond("No trigger found for that message in this channel.", ephemeral=True)
 
     @commands.has_permissions(manage_messages=True)
-    @commands.slash_command(description="List all message triggers in this channel")
+    @triggers.command(name="list", description="List all message triggers in this channel")
     async def list_triggers(self, ctx: discord.ApplicationContext):
 
         conn = self._get_conn()
