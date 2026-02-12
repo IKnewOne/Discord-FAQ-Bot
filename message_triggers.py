@@ -122,14 +122,17 @@ class MessageTriggers(commands.Cog):
 
         conn = self._get_conn()
         cursor = conn.cursor()
+        # Delete existing trigger for this channel/message
+        cursor.execute("""
+                       DELETE
+                           FROM message_triggers
+                           WHERE channel_id = ?
+                             AND message_id = ?
+                       """, (ctx.channel_id, message_id))
+        # Insert the new/updated trigger
         cursor.execute("""
                        INSERT INTO message_triggers (channel_id, guild_id, message_id, message_url, patterns, response_text, created_by)
-                           VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(channel_id, message_id) DO
-                       UPDATE SET
-                           patterns = excluded.patterns,
-                           message_url = excluded.message_url,
-                           response_text = excluded.response_text,
-                           created_by = excluded.created_by
+                           VALUES (?, ?, ?, ?, ?, ?, ?)
                        """, (ctx.channel_id, ctx.guild_id, message_id, message_url, patterns_str, response_text, ctx.author.id))
         conn.commit()
         conn.close()
